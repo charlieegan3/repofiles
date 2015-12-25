@@ -3,6 +3,7 @@ package repofiles
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -31,12 +32,25 @@ type List struct {
 }
 
 type File struct {
-	name     string
-	contents string
+	Path     string
+	Contents string
 }
 
-func (r *Repo) List() List {
-	resp, _ := http.Get(r.listEndpoint())
+type Credentials struct {
+	User  string
+	Token string
+}
+
+func (r *Repo) List(credentials Credentials) List {
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", r.listEndpoint(), nil)
+	if credentials.User != "" {
+		req.SetBasicAuth(credentials.User, credentials.Token)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error : %s", err)
+	}
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
 	list := List{}
@@ -47,7 +61,7 @@ func (r *Repo) List() List {
 	return list
 }
 
-func (r *Repo) Files() []File {
+func (r *Repo) Files(filter string, credentials Credentials) []File {
 	type jsonFile struct {
 		Sha      string
 		Size     int
@@ -56,13 +70,23 @@ func (r *Repo) Files() []File {
 		Encoding string
 	}
 	var parsedFile jsonFile
+	client := &http.Client{}
 	for _, v := range r.list.Tree {
-		resp, _ := http.Get(v.Url)
-		respBody, _ := ioutil.ReadAll(resp.Body)
+		if strings.Contains(v.Path, filter) {
+			req, err := http.NewRequest("GET", v.Url, nil)
+			if credentials.User != "" {
+				req.SetBasicAuth(credentials.User, credentials.Token)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				fmt.Printf("Error : %s", err)
+			}
+			respBody, _ := ioutil.ReadAll(resp.Body)
 
-		json.Unmarshal([]byte(respBody), &parsedFile)
-		contents, _ := base64.StdEncoding.DecodeString(parsedFile.Content)
-		r.files = append(r.files, File{name: v.Path, contents: string(contents)})
+			json.Unmarshal([]byte(respBody), &parsedFile)
+			contents, _ := base64.StdEncoding.DecodeString(parsedFile.Content)
+			r.files = append(r.files, File{Path: v.Path, Contents: string(contents)})
+		}
 	}
 	return r.files
 }
@@ -73,6 +97,11 @@ func (r *Repo) listEndpoint() string {
 		"git/trees/" + r.revision + "?recursive=1",
 	}
 	return strings.Join(segments, "/")
+}
+
+func (f *File) Name() string {
+	steps := strings.Split(f.Path, "/")
+	return steps[len(steps)-1]
 }
 
 func NewRepo(user string, repo string, revision string) Repo {

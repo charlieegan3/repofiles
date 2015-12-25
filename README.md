@@ -16,9 +16,9 @@ import (
 func main() {
     repo := repofiles.NewRepo("username", "repoName", "master or SHA")
     repo.List() //collect the list files
-    file := repo.Files() //request the contents of each file
+    files := repo.Files() //request the contents of each file
 
-    fmt.Println(file)
+    fmt.Println(files)
 }
 
 ```

@@ -26,7 +26,6 @@ func TestInit(t *testing.T) {
 func TestList(t *testing.T) {
 	repo := NewRepo("charlieegan3", "dotfiles", "efba099dae2acc7daac7d0638ba1be39a45914ab")
 	list := repo.List(credentials)
-	fmt.Println(list)
 	var files []string
 	for _, v := range list.Tree {
 		files = append(files, v.Path)

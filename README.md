@@ -14,9 +14,10 @@ import (
 )
 
 func main() {
+	credentials = Credentials{User: os.Getenv("GITHUB_USER"), Token: os.Getenv("GITHUB_TOKEN")}
     repo := repofiles.NewRepo("username", "repoName", "master or SHA")
-    repo.List() //collect the list files
-    files := repo.Files() //request the contents of each file
+    repo.List(credentials) //collect the list files
+    files := repo.Files(credentials) //request the contents of each file
 
     fmt.Println(files)
 }

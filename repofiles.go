@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -62,6 +63,7 @@ func (r *Repo) List(credentials Credentials) List {
 }
 
 func (r *Repo) Files(filter string, credentials Credentials) []File {
+	re := regexp.MustCompile(filter)
 	type jsonFile struct {
 		Sha      string
 		Size     int
@@ -69,10 +71,12 @@ func (r *Repo) Files(filter string, credentials Credentials) []File {
 		Content  string
 		Encoding string
 	}
+	var file File
 	var parsedFile jsonFile
 	client := &http.Client{}
 	for _, v := range r.list.Tree {
-		if strings.Contains(v.Path, filter) {
+		file = File{Path: v.Path}
+		if v.Url != "" && re.Match([]byte(file.Name())) {
 			req, err := http.NewRequest("GET", v.Url, nil)
 			if credentials.User != "" {
 				req.SetBasicAuth(credentials.User, credentials.Token)
